@@ -31,7 +31,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 void Tmp102Init(void);	// Initialization sequence for TMP102 sensor
-void LogMessage(int8_t* dest, size_t destSize, int8_t* msgStr);
+void LogMessage(int8_t* msgStr);
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -97,12 +97,13 @@ int main(void)
   MX_I2C2_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  LogMessage("Initializing I2C...\r\n");
   HAL_I2C_MspInit(&hi2c2);	// initializes the GPIO I2C pins (SDA and SCL), initializes I2C clock
-  LogMessage(&MSG, sizeof(MSG), "Initialized UART and I2C\r\n");
+  LogMessage("I2C initialization complete\r\n");
 
-
+  LogMessage("Initializing TMP102 sensor...\r\n");
   Tmp102Init();
-  LogMessage(&MSG, sizeof(MSG), "Initialized TMP102 sensor\r\n");
+  LogMessage("TMP102 sensor initialization complete\r\n");
 
 
 
@@ -195,15 +196,12 @@ void Tmp102Init()
 }
 
 /*
- * Copies the string in msgStr into dest, displays dest to console, then clears contents of MsgStr
+ *  Displays contents of msgStr to console
  */
-void LogMessage(int8_t* dest, size_t destSize, int8_t* msgStr)
+void LogMessage(int8_t* msgStr)
 {
 	  const int timeoutMs = 100;
-
-	  strcpy(dest, msgStr);
-	  HAL_UART_Transmit(&huart1, dest, destSize, timeoutMs);
-	  memset(dest, 0, destSize);
+	  HAL_UART_Transmit(&huart1, msgStr, strlen(msgStr), timeoutMs);
 };
 
 /* USER CODE END 4 */
