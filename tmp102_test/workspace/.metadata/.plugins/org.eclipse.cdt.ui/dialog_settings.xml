@@ -8,6 +8,7 @@
 		<item key="caseSensitive" value="false"/>
 		<item key="searchFlags" value="227191"/>
 		<list key="previousPatterns">
+			<item value="huart4"/>
 			<item value="HAL_UART_MspInit"/>
 			<item value="HAL_MAX_DELAY"/>
 			<item value="HAL_I2C_IsDeviceReady"/>

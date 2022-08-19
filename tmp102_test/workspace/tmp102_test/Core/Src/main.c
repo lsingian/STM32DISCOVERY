@@ -30,11 +30,13 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+void Tmp102Init(void);	// Initialization sequence for TMP102 sensor
+void LogMessage(int8_t* dest, size_t destSize, int8_t* msgStr);
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MESSAGE_SIZE 100	// max num bytes to be displayed to UART terminal
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,7 +47,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+const uint16_t tmp102Address = 0x48 << 1;	// required left-shift by 1 by the HAL_I2C_IsDeviceReady
 
+uint8_t MSG[MESSAGE_SIZE] = {'\0'};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,29 +95,18 @@ int main(void)
   MX_SPI1_Init();
   MX_USB_PCD_Init();
   MX_I2C2_Init();
-  MX_UART4_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_MspInit(&huart4);
   HAL_I2C_MspInit(&hi2c2);	// initializes the GPIO I2C pins (SDA and SCL), initializes I2C clock
+  LogMessage(&MSG, sizeof(MSG), "Initialized UART and I2C\r\n");
 
-  uint8_t MSG[50] = {'\0'};
-  strcpy(MSG, "Initialized UART\n");
-  HAL_UART_Transmit(&huart4, MSG, sizeof(MSG), 100);
 
-  uint16_t tmp102Address = 0x48 << 1;	// required left-shift by 1 by the HAL_I2C_IsDeviceReady
-  uint32_t trials = 1;
-  uint32_t timeout = 1000; // milliseconds
+  Tmp102Init();
+  LogMessage(&MSG, sizeof(MSG), "Initialized TMP102 sensor\r\n");
 
-  // TODO figure out why changing the tmp102 address to other available addresses doesn't work.
-  if(HAL_I2C_IsDeviceReady(&hi2c2, tmp102Address, trials, timeout) != HAL_OK)
-  {
-	  Error_Handler();
-  }
-  else
-  {
-	   strcpy(MSG,"TMP102 sensor ACK received\n");
-	   HAL_UART_Transmit(&huart4, MSG, sizeof(MSG), 100);
-  }
+
+
+
 
 
   /* USER CODE END 2 */
@@ -169,9 +162,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_UART4
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_USART1
                               |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_I2C2;
-  PeriphClkInit.Uart4ClockSelection = RCC_UART4CLKSOURCE_PCLK1;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.I2c2ClockSelection = RCC_I2C2CLKSOURCE_HSI;
   PeriphClkInit.USBClockSelection = RCC_USBCLKSOURCE_PLL;
@@ -182,6 +175,36 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void Tmp102Init()
+{
+
+	  uint32_t trials = 1;
+	  uint32_t timeout = 1000; // milliseconds
+	  // TODO figure out why changing the tmp102 address to other available addresses doesn't work.
+	  // TODO figure out why we had to left-shift the address by 1
+	  if(HAL_I2C_IsDeviceReady(&hi2c2, tmp102Address, trials, timeout) != HAL_OK)
+	  {
+		  Error_Handler();
+	  }
+	  else
+	  {
+		   strcpy(MSG,"TMP102 sensor ACK received\r\n");
+		   HAL_UART_Transmit(&huart1, MSG, sizeof(MSG), 100);
+		   memset(MSG, 0, 100);
+	  }
+}
+
+/*
+ * Copies the string in msgStr into dest, displays dest to console, then clears contents of MsgStr
+ */
+void LogMessage(int8_t* dest, size_t destSize, int8_t* msgStr)
+{
+	  const int timeoutMs = 100;
+
+	  strcpy(dest, msgStr);
+	  HAL_UART_Transmit(&huart1, dest, destSize, timeoutMs);
+	  memset(dest, 0, destSize);
+};
 
 /* USER CODE END 4 */
 
@@ -194,6 +217,10 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+
+  char errMsg[] = "Error encountered. Terminate the program\r\n";
+  HAL_UART_Transmit(&huart1, errMsg, sizeof(errMsg), HAL_MAX_DELAY);
+
   while (1)
   {
   }
