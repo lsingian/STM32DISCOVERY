@@ -36,7 +36,6 @@ void LogMessage(int8_t* msgStr);
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MESSAGE_SIZE 100	// max num bytes to be displayed to UART terminal
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,8 +47,6 @@ void LogMessage(int8_t* msgStr);
 
 /* USER CODE BEGIN PV */
 const uint16_t tmp102Address = 0x48 << 1;	// required left-shift by 1 by the HAL_I2C_IsDeviceReady
-
-uint8_t MSG[MESSAGE_SIZE] = {'\0'};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -189,14 +186,64 @@ void Tmp102Init()
 	  }
 	  else
 	  {
-		   strcpy(MSG,"TMP102 sensor ACK received\r\n");
-		   HAL_UART_Transmit(&huart1, MSG, sizeof(MSG), 100);
-		   memset(MSG, 0, 100);
+		   LogMessage("TMP102 sensor ACK received\r\n");
 	  }
+
+	  // Check if TMP102 is in the default configuration ("Section 7.5.3 Configuration Register" of TMP102 Datasheet)
+	  const uint16_t defaultConfigMSB = 0x60;
+	  const uint16_t defaultConfigLSB = 0xA0;
+//	  const uint32_t defaultConfigVal = (uint32_t) defaultConfigMSB + (uint32_t) defaultConfigLSB;
+
+	  // TODO Study I2C_TransferConfig method
+	  uint8_t readBuffer[2] = {'\0'};
+	  uint16_t registerPtr = 0x01; // tmp102's pointer register value of 0x01 indicates access to the configuration register
+
+	  // set the register pointer's value to the register wanted to be read
+	  if(HAL_I2C_Master_Transmit(&hi2c2, tmp102Address, &registerPtr, sizeof(uint8_t), timeout) != HAL_OK)
+	  {
+		  Error_Handler();
+	  }
+	  else
+	  {
+		  LogMessage("TMP102 Register Pointer write success\r\n");
+	  }
+
+	  // receive the 2 x 8bit (2 bytes) data into the readBuffer
+	  if(HAL_I2C_Master_Receive(&hi2c2, tmp102Address, readBuffer, sizeof(uint16_t), timeout) != HAL_OK)
+	  {
+		  Error_Handler();
+	  }
+	  else
+	  {
+		  if(readBuffer[0] == defaultConfigMSB && readBuffer[1] == defaultConfigLSB)
+		  {
+			  LogMessage("TMP102 Configuration Register in default configuration\r\n");
+		  }
+		  else
+		  {
+			  Error_Handler();
+		  }
+	  }
+
+//	  if(HAL_I2C_Master_Receive(&hi2c2, tmp102Address, readBuffer, sizeof(readData), timeout) != HAL_OK)
+//	  {
+//	  } // TODO change to non-blocking mode when we are more familiar with I2C.
+//	  else
+//	  {
+//		  uint8_t* pReadData = &readBuffer;
+//		  if(*pReadData != defaultConfigVal)
+//		  {
+//			  LogMessage("Config error \r\n");
+//		  }
+//	  }
+
+
+
 }
 
 /*
  *  Displays contents of msgStr to console
+ *  NOTE: Uses USART1
  */
 void LogMessage(int8_t* msgStr)
 {
